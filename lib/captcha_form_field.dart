@@ -5,15 +5,39 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+abstract class ICaptchaFormFieldController {
+  /// Pode ser usado para forçar o reload do captcha
+  /// quando o usuário já resolveu o catpcha e o mesmo
+  /// já foi validado no servidor.
+  void invalidate();
+}
+
+class CaptchaFormController implements ICaptchaFormFieldController {
+  @override
+  void invalidate() {
+    if (_onInvalidate != null) {
+      _onInvalidate!();
+    }
+  }
+
+  //callback quando invalidate for chamado
+  void Function()? _onInvalidate;
+
+  void _listenInvalidate(void Function()? callback) {
+    _onInvalidate = callback;
+  }
+}
+
 class CaptchaFormField extends StatefulWidget {
   final Function(String token) onSuccess;
   final Function(bool needSolvePluzzes)? onResize;
   final Function()? onExpired;
   final String urlCaptcha;
-  
+  final CaptchaFormController? controller;
 
   CaptchaFormField({
     super.key,
+    this.controller,
     required this.onSuccess,
     this.onResize,
     this.onExpired,
@@ -37,6 +61,9 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
   @override
   initState() {
     super.initState();
+    widget.controller?._listenInvalidate(() {
+      _controller?.reload();
+    });
   }
 
   double _captchaHeight = 90;

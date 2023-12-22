@@ -293,10 +293,51 @@ void main() {
       await tester.pump();
 
       // Verifique se o erro desaparece
-      expect(find.text('Captcha expirado'), findsOneWidget);
-
+      expect(find.text('Captcha expirado'), findsNothing);
     },
   );
+
+  testWidgets(
+      'When invalidate [captchaController] should call webviewController reload method',
+      (tester) async {
+    final formKey = GlobalKey<FormState>();
+    final controller = CaptchaFormController();
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Column(
+          children: [
+            Form(
+              key: formKey,
+              child: Column(
+                children: [
+                  CaptchaFormField(
+                    controller: controller,
+                    onSuccess: (token) {},
+                    onResize: (needSolvePluzzes) {},
+                    urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                controller.invalidate();
+              },
+              child: const Text('Invalidate'),
+            ),
+          ],
+        ),
+      ),
+    ));
+
+    expect(platform.controller!.reloadCalled, false);
+
+    await tester.tap(find.text('Invalidate'));
+    await tester.pump();
+
+    expect(platform.controller!.reloadCalled, true);
+  });
 }
 
 class FakeWebViewPlatform extends WebViewPlatform {
@@ -336,6 +377,7 @@ class FakeWebViewController extends PlatformWebViewController {
   FakeWebViewController(super.params) : super.implementation();
 
   final List<JavaScriptChannelParams> _channels = [];
+  bool reloadCalled = false;
 
   void expireCaptcha() {
     for (final channel in _channels) {
@@ -379,6 +421,11 @@ class FakeWebViewController extends PlatformWebViewController {
   @override
   Future<String?> currentUrl() async {
     return 'http://localhost:5501/recaptcha-app.html';
+  }
+
+  @override
+  Future<void> reload() async {
+    reloadCalled = true;
   }
 }
 
