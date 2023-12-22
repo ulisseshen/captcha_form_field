@@ -64,6 +64,7 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
     widget.controller?._listenInvalidate(() {
       _controller?.reload();
     });
+    _setupWebviewController(context);
   }
 
   double _captchaHeight = 90;
@@ -71,48 +72,10 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
   WebViewWidget? _webview;
   String? _token;
   bool _expired = false;
-   GlobalKey<FormFieldState> formKey = GlobalKey<FormFieldState>();
-  
+  GlobalKey<FormFieldState> formKey = GlobalKey<FormFieldState>();
 
   @override
   Widget build(BuildContext context) {
-    _controller ??= WebViewController()
-      ..setBackgroundColor(Theme.of(context).scaffoldBackgroundColor)
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..addJavaScriptChannel('Captcha', //TODO renomear para [OnSuccess]
-          onMessageReceived: (JavaScriptMessage message) {
-        widget.onSuccess(message.message);
-        _token = message.message;
-
-        formKey.currentState?.validate();
-      })
-      ..addJavaScriptChannel('OnShowPluzze', onMessageReceived: (message) {
-        _onShowPluzze(message, context);
-
-        formKey.currentState?.validate();
-      })
-      ..addJavaScriptChannel('OnExpired', onMessageReceived: (_) {
-        _expired = true;
-        if (widget.onExpired != null) {
-          widget.onExpired!();
-        }
-
-        formKey.currentState?.validate();
-      })
-      ..loadRequest(Uri.parse(widget.urlCaptcha));
-
-    //evitar que se abra outra url
-    _controller!.setNavigationDelegate(NavigationDelegate(
-      onNavigationRequest: (NavigationRequest navigationRequest) {
-        if (navigationRequest.url == widget.urlCaptcha ||
-            navigationRequest.url.contains('recaptcha') ||
-            navigationRequest.url.contains('about:blank')) {
-          return NavigationDecision.navigate;
-        }
-        return NavigationDecision.prevent;
-      },
-    ));
-
     _webview ??= WebViewWidget(
       controller: _controller!,
     );
@@ -158,6 +121,51 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
         return _token == null ? 'Captcha inválido' : null;
       },
     );
+  }
+
+  void _setupWebviewController(BuildContext context) {
+    _controller ??= WebViewController()
+      ..setBackgroundColor(Theme.of(context).scaffoldBackgroundColor)
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel('Captcha', //TODO renomear para [OnSuccess]
+          onMessageReceived: (JavaScriptMessage message) {
+        widget.onSuccess(message.message);
+        _token = message.message;
+
+        _validateCaptcha();
+
+        formKey.currentState?.validate();
+      })
+      ..addJavaScriptChannel('OnShowPluzze', onMessageReceived: (message) {
+        _onShowPluzze(message, context);
+
+        formKey.currentState?.validate();
+      })
+      ..addJavaScriptChannel('OnExpired', onMessageReceived: (_) {
+        _expired = true;
+        if (widget.onExpired != null) {
+          widget.onExpired!();
+        }
+
+        formKey.currentState?.validate();
+      })
+      ..loadRequest(Uri.parse(widget.urlCaptcha));
+
+    //evitar que se abra outra url
+    _controller!.setNavigationDelegate(NavigationDelegate(
+      onNavigationRequest: (NavigationRequest navigationRequest) {
+        if (navigationRequest.url == widget.urlCaptcha ||
+            navigationRequest.url.contains('recaptcha') ||
+            navigationRequest.url.contains('about:blank')) {
+          return NavigationDecision.navigate;
+        }
+        return NavigationDecision.prevent;
+      },
+    ));
+  }
+
+  void _validateCaptcha() {
+    _expired = false;
   }
 
   void _onShowPluzze(
