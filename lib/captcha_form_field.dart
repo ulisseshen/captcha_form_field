@@ -132,7 +132,7 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
         widget.onSuccess(message.message);
         _token = message.message;
 
-        _validateCaptcha();
+        _resetExpiration();
 
         formKey.currentState?.validate();
       })
@@ -164,7 +164,7 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
     ));
   }
 
-  void _validateCaptcha() {
+  void _resetExpiration() {
     _expired = false;
   }
 
