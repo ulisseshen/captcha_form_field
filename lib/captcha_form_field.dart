@@ -33,12 +33,14 @@ class CaptchaFormField extends StatefulWidget {
   final Function(bool needSolvePluzzes)? onResize;
   final Function()? onExpired;
   final String urlCaptcha;
+  final String publicKey;
   final CaptchaFormController? controller;
 
   CaptchaFormField({
     super.key,
     this.controller,
     required this.onSuccess,
+    required this.publicKey,
     this.onResize,
     this.onExpired,
     String? urlCaptcha,
@@ -63,6 +65,8 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
     super.initState();
     widget.controller?._listenInvalidate(() {
       _controller?.reload();
+      _token = null;
+      _expired = false;
     });
     _setupWebviewController(context);
   }
@@ -76,6 +80,7 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
 
   @override
   Widget build(BuildContext context) {
+    _controller?.setBackgroundColor(Theme.of(context).scaffoldBackgroundColor);
     _webview ??= WebViewWidget(
       controller: _controller!,
     );
@@ -125,9 +130,8 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
 
   void _setupWebviewController(BuildContext context) {
     _controller ??= WebViewController()
-      ..setBackgroundColor(Theme.of(context).scaffoldBackgroundColor)
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..addJavaScriptChannel('Captcha', //TODO renomear para [OnSuccess]
+      ..addJavaScriptChannel('OnSuccess',
           onMessageReceived: (JavaScriptMessage message) {
         widget.onSuccess(message.message);
         _token = message.message;
@@ -149,9 +153,16 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
 
         formKey.currentState?.validate();
       })
-      ..loadRequest(Uri.parse(widget.urlCaptcha));
+      ..addJavaScriptChannel('onCaptchaError', onMessageReceived: (received) {
+        print('onCaptchaError: ${received.message}');
+      })
+      ..setOnConsoleMessage((message) {
+        print('onConsoleMessage: ${message.message}');
+      })
+      ..loadRequest(
+        Uri.parse('${widget.urlCaptcha}?publicKey=${widget.publicKey}'));
 
-    //evitar que se abra outra url
+
     _controller!.setNavigationDelegate(NavigationDelegate(
       onNavigationRequest: (NavigationRequest navigationRequest) {
         if (navigationRequest.url == widget.urlCaptcha ||
