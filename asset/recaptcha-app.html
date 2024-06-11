@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+
+<head>
+  <title>reCAPTCHA</title>
+  <script src="https://www.google.com/recaptcha/api.js?onload=recaptchaCallback&render=explicit&hl=pt-BR" async
+    defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    window {
+      background-color: #FAFAFA;
+    }
+
+    body {
+      background-color: #FAFAFA;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .captcha-container {
+      display: flex;
+      justify-content: center;
+    }
+
+    .captcha-container>form>div {
+      justify-content: center;
+      align-self: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="captcha-container">
+    <form action="?" method="POST">
+      <div id="gcaptcha-container" style="width: 100%;" class="g-recaptcha">
+      </div>
+
+    </form>
+  </div>
+  <script>
+    const selectorIframe = 'div > div > iframe[title="o desafio reCAPTCHA expira em dois minutos"]';
+
+    const parmas = new URLSearchParams(window.location.search);
+    const publicKey = parmas.get('publicKey');
+    if (!publicKey) {
+      console.error('publicKey não encontrada');
+    } else {
+      console.log('publicKey encontrada');
+    }
+
+    function onSuccessCallback(response) {
+      if (typeof OnSuccess !== "undefined") {
+        OnSuccess.postMessage(response);
+      }
+    }
+
+    function onExpiredCallback() {
+      if (typeof OnExpired !== "undefined") {
+        OnExpired.postMessage('expired');
+      }
+      window.location.reload();
+    }
+
+    if (typeof OnShowPluzze !== "undefined") {
+      const iframe = document.querySelector(selectorIframe);
+      if (!iframe) {
+        console.log('iframe não encontrado no Onload');
+
+      } else {
+        console.log('iframe encontrado no Onload');
+
+        const iframeHeight = iframe.clientHeight;
+        const json = {
+          captchaHeight: iframeHeight,
+          showPluzze: false
+        };
+        OnShowPluzze.postMessage(JSON.stringify(json));
+      }
+    }
+
+    async function recaptchaCallback() {
+      if (!publicKey) {
+        console.log('publicKey não encontrada');
+        return;
+      }
+
+      console.log("renderizando captcha")
+      grecaptcha.render('gcaptcha-container', {
+        'sitekey': publicKey,
+        'callback': onSuccessCallback,
+        'expired-callback': onExpiredCallback,
+        'error-callback': onCaptchaError
+      });
+
+      let targetElement;
+      do {
+        targetElement = document.querySelector(selectorIframe);
+        if (targetElement) {
+          console.log('iframe encontrado');
+          addPuzzleListener();
+        } else {
+          // O elemento não está disponível, continue esperando ou tome outra ação.
+          await new Promise((resolve, reject) => {
+            setTimeout(() => {
+              resolve();
+            }, 100)
+          }) // Tente novamente após 100 milissegundos.
+        }
+      } while (!targetElement);
+
+    }
+
+    function onCaptchaError() {
+      if (typeof OnCaptchaError !== "undefined") {
+        OnCaptchaError.postMessage('Erro ao carregar o captcha');
+      }
+    }
+
+    function addPuzzleListener() {
+      const targetElement = document.querySelector(selectorIframe).parentElement.parentElement;
+      // Adiciona um event listener à propriedade visibility
+      Object.defineProperty(targetElement.style, 'visibility', {
+        set: function (newValue) {
+          this.setProperty('visibility', newValue);
+
+          if (typeof OnShowPluzze !== "undefined") {
+            setTimeout(() => {
+              const needShowPluzze = newValue === 'visible';
+              const iframeHeight = document.querySelector(selectorIframe).offsetHeight;
+              const json = {
+                captchaHeight: iframeHeight,
+                showPluzze: needShowPluzze
+              };
+
+              OnShowPluzze.postMessage(JSON.stringify(json));
+              //precisa de um timeout para que o iframe seja renderizado
+            }, 100);
+          }
+        }
+      });
+    }
+  </script>
+</body>
+
+</html>
+
+<body>
