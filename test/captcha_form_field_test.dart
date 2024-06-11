@@ -5,8 +5,10 @@ import 'package:webview_flutter_platform_interface/webview_flutter_platform_inte
 
 void main() {
   late FakeWebViewPlatform platform;
-  setUp(() {
-    platform = FakeWebViewPlatform();
+  String publicKey = "6Lc2XV4cAAAAAEx3Z4Z4Z4Z4Z4Z4Z4Z4Z4Z4Z4Z4";
+  setUp(() async {
+    platform = FakeWebViewPlatform(
+        FakeWebViewController(const PlatformWebViewControllerCreationParams()));
 
     WebViewPlatform.instance = platform;
   });
@@ -25,10 +27,10 @@ void main() {
           child: Column(
             children: [
               CaptchaFormField(
-                onSuccess: (token) {},
-                onResize: (needSolvePluzzes) {},
-                urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
-              ),
+                  onSuccess: (token) {},
+                  onResize: (needSolvePluzzes) {},
+                  urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
+                  publicKey: publicKey),
               ElevatedButton(
                 onPressed: () {
                   if (formKey.currentState!.validate()) {
@@ -68,6 +70,7 @@ void main() {
                 onSuccess: (token) {},
                 onResize: (needSolvePluzzes) {},
                 urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
+                publicKey: publicKey,
               ),
               ElevatedButton(
                 onPressed: () {
@@ -83,7 +86,7 @@ void main() {
       ),
     ));
 
-    platform.controller!.expireCaptcha();
+    platform.controller.expireCaptcha();
     // Submeta o formulário
 
     await tester.tap(find.text('Submit'));
@@ -109,6 +112,7 @@ void main() {
                 onSuccess: (token) {},
                 onResize: (needSolvePluzzes) {},
                 urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
+                publicKey: publicKey,
               ),
               ElevatedButton(
                 onPressed: () {
@@ -130,7 +134,7 @@ void main() {
     expect(find.text('Captcha inválido'), findsOneWidget);
 
     //deixar o field valido
-    platform.controller!.solveCaptcha();
+    platform.controller.solveCaptcha();
 
     // Execute a validação do formulário novamente
     await tester.tap(find.text('Submit'));
@@ -144,10 +148,20 @@ void main() {
   testWidgets('Should throw Exception when urlCaptcha is null or empty',
       (tester) async {
     // Teste para null
-    expect(() => CaptchaFormField(onSuccess: (token) {}), throwsAssertionError);
+    expect(
+        () => CaptchaFormField(
+              onSuccess: (token) {},
+              publicKey: publicKey,
+            ),
+        throwsAssertionError);
 
     // Teste para vazio
-    expect(() => CaptchaFormField(urlCaptcha: '', onSuccess: (token) {}),
+    expect(
+        () => CaptchaFormField(
+              urlCaptcha: '',
+              onSuccess: (token) {},
+              publicKey: publicKey,
+            ),
         throwsAssertionError);
   });
 
@@ -169,6 +183,7 @@ void main() {
                 onSuccess: (token) {},
                 onResize: (needSolvePluzzes) {},
                 urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
+                publicKey: publicKey,
               ),
               ElevatedButton(
                 onPressed: () {
@@ -190,7 +205,7 @@ void main() {
     expect(find.text('Captcha inválido'), findsOneWidget);
 
     //deixar o field valido
-    platform.controller!.solveCaptcha();
+    platform.controller.solveCaptcha();
 
     await tester.pump();
 
@@ -213,6 +228,7 @@ void main() {
                 onSuccess: (token) {},
                 onResize: (needSolvePluzzes) {},
                 urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
+                publicKey: publicKey,
               ),
               ElevatedButton(
                 onPressed: () {
@@ -234,12 +250,12 @@ void main() {
     expect(find.text('Captcha inválido'), findsOneWidget);
 
     //deixar o field valido
-    platform.controller!.expireCaptcha();
+    platform.controller.expireCaptcha();
     await tester.pump();
 
     // Verifique se o erro desaparece
     expect(find.text('Captcha expirado'), findsOneWidget);
-    platform.controller!.solveCaptcha();
+    platform.controller.solveCaptcha();
 
     await tester.pump();
 
@@ -262,6 +278,7 @@ void main() {
                   onSuccess: (token) {},
                   onResize: (needSolvePluzzes) {},
                   urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
+                  publicKey: publicKey,
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -283,12 +300,12 @@ void main() {
       expect(find.text('Captcha inválido'), findsOneWidget);
 
       // Deixar o field válido
-      platform.controller!.expireCaptcha();
+      platform.controller.expireCaptcha();
       await tester.pump();
 
       // Verifique se o erro desaparece
       expect(find.text('Captcha expirado'), findsOneWidget);
-      platform.controller!.solveCaptcha();
+      platform.controller.solveCaptcha();
 
       await tester.pump();
 
@@ -316,6 +333,7 @@ void main() {
                     onSuccess: (token) {},
                     onResize: (needSolvePluzzes) {},
                     urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
+                    publicKey: publicKey,
                   ),
                 ],
               ),
@@ -331,24 +349,87 @@ void main() {
       ),
     ));
 
-    expect(platform.controller!.reloadCalled, false);
+    expect(platform.controller.reloadCalled, false);
 
     await tester.tap(find.text('Invalidate'));
     await tester.pump();
 
-    expect(platform.controller!.reloadCalled, true);
+    expect(platform.controller.reloadCalled, true);
+  });
+
+  testWidgets('''When calling invalidate after solving the captcha, 
+  it should display [Captcha inválido] after submitting it again''',
+      (tester) async {
+    final formKey = GlobalKey<FormState>();
+    final controller = CaptchaFormController();
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Column(
+          children: [
+            Form(
+              key: formKey,
+              child: Column(
+                children: [
+                  CaptchaFormField(
+                    controller: controller,
+                    onSuccess: (token) {},
+                    onResize: (needSolvePluzzes) {},
+                    urlCaptcha: 'http://localhost:5501/recaptcha-app.html',
+                    publicKey: publicKey,
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                controller.invalidate();
+              },
+              child: const Text('Invalidate'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  // Ação de envio do formulário
+                }
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    ));
+
+    //deixar o field valido
+    platform.controller.solveCaptcha();
+
+    await tester.pump();
+
+    // Verifique se o erro desaparece
+    expect(find.text('Captcha inválido'), findsNothing);
+
+    await tester.tap(find.text('Invalidate'));
+    await tester.pump();
+
+    expect(platform.controller.reloadCalled, true);
+
+    await tester.tap(find.text('Submit'));
+    await tester.pump();
+
+    expect(find.text('Captcha inválido'), findsOneWidget);
   });
 }
 
 class FakeWebViewPlatform extends WebViewPlatform {
-  FakeWebViewController? controller;
+  final FakeWebViewController controller;
+
+  FakeWebViewPlatform(this.controller);
 
   @override
   PlatformWebViewController createPlatformWebViewController(
     PlatformWebViewControllerCreationParams params,
   ) {
-    controller = FakeWebViewController(params);
-    return controller!;
+    return controller;
   }
 
   @override
@@ -391,11 +472,22 @@ class FakeWebViewController extends PlatformWebViewController {
 
   void solveCaptcha() {
     for (final channel in _channels) {
-      if (channel.name == 'Captcha') {
+      if (channel.name == 'OnSuccess') {
         channel.onMessageReceived(const JavaScriptMessage(
             message: 'some thing that looks like a token'));
       }
     }
+  }
+
+  bool clearLocalStorageCalled = false;
+  @override
+  Future<void> clearLocalStorage() async {
+    clearLocalStorageCalled = true;
+  }
+
+  @override
+  Future<void> setOnConsoleMessage(void Function(JavaScriptConsoleMessage consoleMessage) onConsoleMessage)async {
+
   }
 
   @override
