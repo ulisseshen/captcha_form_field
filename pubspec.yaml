@@ -1,7 +1,7 @@
 name: captcha_form_field
 description: A new Flutter package project that fits your needs for captcha form in your app.
 version: 1.0.0
-homepage: flutter.dev
+homepage: https://flutterbrasil.dev
 
 environment:
   sdk: '>=3.1.4 <4.0.0'
