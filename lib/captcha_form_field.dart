@@ -160,8 +160,7 @@ class CaptchaFormFieldState extends State<CaptchaFormField> {
         print('onConsoleMessage: ${message.message}');
       })
       ..loadRequest(
-        Uri.parse('${widget.urlCaptcha}?publicKey=${widget.publicKey}'));
-
+          Uri.parse('${widget.urlCaptcha}?publicKey=${widget.publicKey}'));
 
     _controller!.setNavigationDelegate(NavigationDelegate(
       onNavigationRequest: (NavigationRequest navigationRequest) {

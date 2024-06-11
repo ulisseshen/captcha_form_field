@@ -486,9 +486,9 @@ class FakeWebViewController extends PlatformWebViewController {
   }
 
   @override
-  Future<void> setOnConsoleMessage(void Function(JavaScriptConsoleMessage consoleMessage) onConsoleMessage)async {
-
-  }
+  Future<void> setOnConsoleMessage(
+      void Function(JavaScriptConsoleMessage consoleMessage)
+          onConsoleMessage) async {}
 
   @override
   Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {}
